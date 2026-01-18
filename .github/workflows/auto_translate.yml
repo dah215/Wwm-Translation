@@ -1,0 +1,37 @@
+name: Auto Translate Game Files
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'extracted_text.tsv'
+
+jobs:
+  translate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run translation script
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python gemini_translate.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add translation_vn.tsv
+          git commit -m "Auto-translation update [skip ci]" || echo "No changes to commit"
+          git push

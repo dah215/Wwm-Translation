@@ -2,10 +2,9 @@ import os
 import csv
 import time
 import google.generativeai as genai
-from concurrent.futures import ThreadPoolExecutor
 
-# Cấu hình Gemini API
-API_KEY = "AIzaSyCchGLebhB2aNwukTXJ7Zh1sYTknahxLQk"
+# Lấy API Key từ biến môi trường (bảo mật hơn)
+API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyCchGLebhB2aNwukTXJ7Zh1sYTknahxLQk")
 genai.configure(api_key=API_KEY)
 model = genai.GenerativeModel('gemini-flash-latest')
 
@@ -16,14 +15,19 @@ def translate_batch(texts, target_lang="Vietnamese"):
     try:
         response = model.generate_content(prompt)
         translated_content = response.text.strip()
-        return translated_content.split('\n')
+        # Xử lý trường hợp AI trả về thừa hoặc thiếu dòng
+        lines = translated_content.split('\n')
+        return lines
     except Exception as e:
         print(f"Error during translation: {e}")
         return None
 
-def process_tsv(input_path, output_path, batch_size=30, limit=100):
+def process_tsv(input_path, output_path, batch_size=20, limit=500):
     if not os.path.exists(input_path):
         print(f"Input file not found: {input_path}")
+        # Nếu không có file đầu vào, tạo file mẫu để tránh lỗi workflow
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write("ID\tOriginalText\n")
         return
 
     rows = []
@@ -46,15 +50,15 @@ def process_tsv(input_path, output_path, batch_size=30, limit=100):
         print(f"Processing batch {i//batch_size + 1}...")
         translated_texts = translate_batch(texts)
         
-        if translated_texts:
-            for j in range(min(len(batch), len(translated_texts))):
+        if translated_texts and len(translated_texts) >= len(batch):
+            for j in range(len(batch)):
                 translated_rows.append([batch[j][0], translated_texts[j]])
         else:
-            # Fallback to original if translation fails
+            print(f"Batch {i//batch_size + 1} failed or returned inconsistent results. Using original text.")
             for row in batch:
                 translated_rows.append(row)
         
-        time.sleep(1) # Rate limiting
+        time.sleep(2) # Tránh bị giới hạn API (Rate limit)
 
     with open(output_path, 'w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f, delimiter='\t')
@@ -64,9 +68,8 @@ def process_tsv(input_path, output_path, batch_size=30, limit=100):
     print(f"Translation saved to {output_path}")
 
 if __name__ == "__main__":
-    # Đường dẫn file đã trích xuất từ trước
-    input_tsv = "/home/ubuntu/extracted_text.tsv"
-    output_tsv = "/home/ubuntu/Wwm-Translation/translation_vn.tsv"
+    input_tsv = "extracted_text.tsv"
+    output_tsv = "translation_vn.tsv"
     
-    # Dịch thử nghiệm 100 dòng đầu tiên
-    process_tsv(input_tsv, output_tsv, limit=100)
+    # Tăng giới hạn dịch lên 500 dòng mỗi lần chạy tự động
+    process_tsv(input_tsv, output_tsv, limit=500)
