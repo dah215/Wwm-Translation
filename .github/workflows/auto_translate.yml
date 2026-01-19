@@ -22,11 +22,11 @@ jobs:
         run: |
           pip install -r requirements.txt pyzstd
 
-      - name: Process original file (if exists)
+      - name: 1. Extract original file
         run: |
           python process_game_file.py
 
-      - name: Run translation script
+      - name: 2. Run translation script
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
@@ -34,12 +34,18 @@ jobs:
             python gemini_translate.py
           else
             echo "No text to translate."
+            exit 1
           fi
 
-      - name: Commit and push changes
+      - name: 3. Repack to original format
+        run: |
+          python repack_game_file.py
+
+      - name: 4. Commit and push changes
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          git add translation_vn.tsv extracted_text.tsv
-          git commit -m "Auto-translation update [skip ci]" || echo "No changes to commit"
+          # Thêm file kết quả không đuôi và các file tsv
+          git add translation_vn.tsv extracted_text.tsv translate_words_map_vn
+          git commit -m "Auto-translation and repack update [skip ci]" || echo "No changes to commit"
           git push
