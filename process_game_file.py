@@ -16,7 +16,7 @@ def extract_file(input_file, output_dir):
             magic = f.read(4)
             if magic != b'\xEF\xBE\xAD\xDE':
                 log(f"❌ Invalid file format: {input_file}")
-                return False
+                return None
             
             f.read(4)
             offset_count_bytes = f.read(4)
@@ -81,13 +81,20 @@ def extract_text_to_tsv(input_dir, output_file):
 if __name__ == "__main__":
     # Tìm file không có đuôi trong thư mục gốc
     input_file = None
+    # Danh sách các file loại trừ
+    exclude = ['LICENSE', 'README.md', 'requirements.txt', 'gemini_translate.py', 'process_game_file.py', 'repack_game_file.py', 'translation_vn.tsv', 'extracted_text.tsv', 'translate_words_map_vn']
+    
     for f in os.listdir('.'):
-        if os.path.isfile(f) and '.' not in f and f not in ['LICENSE', 'README']:
+        if os.path.isfile(f) and f not in exclude and ('.' not in f or f.endswith('_zh_tw') or f.endswith('_en')):
             input_file = f
             break
     
     if input_file:
         log(f"Processing original file: {input_file}")
+        # Lưu tên file gốc để script repack sử dụng
+        with open("original_filename.txt", "w") as f:
+            f.write(input_file)
+            
         dat_dir = extract_file(input_file, "work")
         if dat_dir:
             extract_text_to_tsv(dat_dir, "extracted_text.tsv")
