@@ -1,14 +1,21 @@
-name: Auto Translate Game Files
+name: Continuous Translation and Repack
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 */4 * * *' # Chạy mỗi 4 tiếng một lần
   push:
     branches:
       - main
+    paths:
+      - 'process_game_file.py'
+      - 'repack_game_file.py'
 
 jobs:
-  translate:
+  translate_and_repack:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -20,32 +27,34 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt pyzstd
+          pip install google-generativeai pyzstd
 
-      - name: 1. Extract original file
+      - name: 1. Extract original file (if exists)
         run: |
           python process_game_file.py
 
-      - name: 2. Run translation script
+      - name: 2. Run translation script (Incremental)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           if [ -f "extracted_text.tsv" ]; then
             python gemini_translate.py
           else
-            echo "No text to translate."
-            exit 1
+            echo "No text to translate. Please upload the original game file."
           fi
 
       - name: 3. Repack to original format
         run: |
-          python repack_game_file.py
+          if [ -f "translation_vn.tsv" ] && [ -d "work" ]; then
+            python repack_game_file.py
+          else
+            echo "Skipping repack: missing translation or work directory."
+          fi
 
       - name: 4. Commit and push changes
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          # Thêm file kết quả không đuôi và các file tsv
           git add translation_vn.tsv extracted_text.tsv translate_words_map_vn
-          git commit -m "Auto-translation and repack update [skip ci]" || echo "No changes to commit"
+          git commit -m "Continuous translation update [skip ci]" || echo "No changes to commit"
           git push

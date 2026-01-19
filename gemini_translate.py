@@ -3,7 +3,7 @@ import csv
 import time
 import google.generativeai as genai
 
-# Lấy API Key từ biến môi trường (bảo mật hơn)
+# Cấu hình API
 API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyCchGLebhB2aNwukTXJ7Zh1sYTknahxLQk")
 genai.configure(api_key=API_KEY)
 model = genai.GenerativeModel('gemini-flash-latest')
@@ -15,61 +15,90 @@ def translate_batch(texts, target_lang="Vietnamese"):
     try:
         response = model.generate_content(prompt)
         translated_content = response.text.strip()
-        # Xử lý trường hợp AI trả về thừa hoặc thiếu dòng
         lines = translated_content.split('\n')
         return lines
     except Exception as e:
         print(f"Error during translation: {e}")
         return None
 
-def process_tsv(input_path, output_path, batch_size=20, limit=500):
+def load_existing_translations(output_path):
+    translations = {}
+    if os.path.exists(output_path):
+        with open(output_path, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f, delimiter='\t')
+            next(reader, None) # skip header
+            for row in reader:
+                if len(row) >= 2:
+                    translations[row[0]] = row[1]
+    return translations
+
+def process_tsv(input_path, output_path, batch_size=30, max_rows_per_run=2000):
     if not os.path.exists(input_path):
         print(f"Input file not found: {input_path}")
-        # Nếu không có file đầu vào, tạo file mẫu để tránh lỗi workflow
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write("ID\tOriginalText\n")
         return
 
-    rows = []
+    # Tải các bản dịch đã có
+    existing_translations = load_existing_translations(output_path)
+    print(f"Loaded {len(existing_translations)} existing translations.")
+
+    rows_to_translate = []
+    all_rows_info = [] # Để giữ thứ tự và ID
+
     with open(input_path, 'r', encoding='utf-8') as f:
         reader = csv.reader(f, delimiter='\t')
         header = next(reader)
         for row in reader:
-            if len(row) >= 2 and row[1].strip():
-                rows.append(row)
-            if len(rows) >= limit:
+            if len(row) < 2: continue
+            row_id = row[0]
+            original_text = row[1]
+            all_rows_info.append(row_id)
+            
+            # Chỉ dịch nếu chưa có trong file kết quả
+            if row_id not in existing_translations and original_text.strip():
+                rows_to_translate.append(row)
+            
+            if len(rows_to_translate) >= max_rows_per_run:
                 break
 
-    print(f"Translating {len(rows)} rows in batches of {batch_size}...")
+    if not rows_to_translate:
+        print("All rows are already translated or no new rows found.")
+        return
+
+    print(f"Translating {len(rows_to_translate)} new rows...")
     
-    translated_rows = []
-    for i in range(0, len(rows), batch_size):
-        batch = rows[i:i+batch_size]
+    new_translations = {}
+    for i in range(0, len(rows_to_translate), batch_size):
+        batch = rows_to_translate[i:i+batch_size]
         texts = [row[1] for row in batch]
         
-        print(f"Processing batch {i//batch_size + 1}...")
+        print(f"Processing batch {i//batch_size + 1} / {len(rows_to_translate)//batch_size + 1}...")
         translated_texts = translate_batch(texts)
         
         if translated_texts and len(translated_texts) >= len(batch):
             for j in range(len(batch)):
-                translated_rows.append([batch[j][0], translated_texts[j]])
+                new_translations[batch[j][0]] = translated_texts[j]
         else:
-            print(f"Batch {i//batch_size + 1} failed or returned inconsistent results. Using original text.")
-            for row in batch:
-                translated_rows.append(row)
+            print(f"Batch {i//batch_size + 1} failed. Skipping.")
         
-        time.sleep(2) # Tránh bị giới hạn API (Rate limit)
+        time.sleep(4) # Tăng thời gian chờ để tránh Rate Limit của Gemini Free Tier
 
+    # Cập nhật và lưu lại toàn bộ
+    existing_translations.update(new_translations)
+    
+    # Ghi lại file kết quả (giữ nguyên header)
     with open(output_path, 'w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f, delimiter='\t')
         writer.writerow(header)
-        writer.writerows(translated_rows)
+        # Ghi theo thứ tự ID đã có để đảm bảo tính nhất quán (tùy chọn)
+        # Ở đây ta ghi toàn bộ những gì đã dịch được
+        for row_id, text in existing_translations.items():
+            writer.writerow([row_id, text])
     
-    print(f"Translation saved to {output_path}")
+    print(f"Progress updated. Total translated: {len(existing_translations)}")
 
 if __name__ == "__main__":
     input_tsv = "extracted_text.tsv"
     output_tsv = "translation_vn.tsv"
     
-    # Tăng giới hạn dịch lên 500 dòng mỗi lần chạy tự động
-    process_tsv(input_tsv, output_tsv, limit=500)
+    # Mỗi lần chạy dịch 2000 dòng (có thể điều chỉnh tùy theo giới hạn API)
+    process_tsv(input_tsv, output_tsv, max_rows_per_run=2000)
