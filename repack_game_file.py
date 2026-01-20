@@ -42,7 +42,7 @@ def apply_translation_to_dat(dat_dir, translation_tsv):
             rel_offset = struct.unpack('<I', data[entry_pos+8:entry_pos+12])[0]
             length = struct.unpack('<I', data[entry_pos+12:entry_pos+16])[0]
             
-            text_pos = entry_pos + 8 + rel_offset
+            text_pos = entry_pos + 12 + rel_offset
             old_text = data[text_pos:text_pos+length].decode('utf-8', errors='ignore')
             new_text = translations.get(id_bytes, old_text)
             
@@ -55,6 +55,7 @@ def apply_translation_to_dat(dat_dir, translation_tsv):
         for i in range(count_full):
             entry_pos = header_end + (i * 16)
             new_dat.extend(data[entry_pos:entry_pos+8])
+            # Tính toán offset tương đối mới
             new_offset = (header_end + count_full * 16 + offsets[i]) - (entry_pos + 12)
             new_dat.extend(struct.pack('<I', new_offset))
             new_dat.extend(struct.pack('<I', len(new_texts[i])))
@@ -92,19 +93,20 @@ def pak_file(dat_dir, output_file):
         return False
 
 if __name__ == "__main__":
-    # Đọc tên file gốc để xác định thư mục work
-    original_filename = "translate_words_map_zh_tw"
+    original_filename = None
     if os.path.exists("original_filename.txt"):
         with open("original_filename.txt", "r") as f:
             original_filename = f.read().strip()
     
-    base_name = os.path.splitext(original_filename)[0]
-    dat_dir = os.path.join("work", base_name)
-    translation_tsv = "translation_vn.tsv"
-    output_file = "translate_words_map_vn"
-    
-    if os.path.exists(dat_dir):
-        apply_translation_to_dat(dat_dir, translation_tsv)
-        pak_file(dat_dir, output_file)
+    if not original_filename:
+        log("❌ original_filename.txt not found. Cannot determine dat directory.")
     else:
-        log(f"Missing dat directory: {dat_dir}")
+        dat_dir = os.path.join("work", original_filename)
+        translation_tsv = "translation_vn.tsv"
+        output_file = "translate_words_map_vn"
+        
+        if os.path.exists(dat_dir):
+            apply_translation_to_dat(dat_dir, translation_tsv)
+            pak_file(dat_dir, output_file)
+        else:
+            log(f"❌ Missing dat directory: {dat_dir}")
