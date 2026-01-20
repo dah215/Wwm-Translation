@@ -80,7 +80,7 @@ def process_tsv(input_path, output_path, batch_size=30, max_rows_per_run=2000):
         else:
             print(f"Batch {i//batch_size + 1} failed. Skipping.")
         
-        time.sleep(4) # Tăng thời gian chờ để tránh Rate Limit của Gemini Free Tier
+        time.sleep(2) # Tăng thời gian chờ để tránh Rate Limit của Gemini Free Tier
 
     # Cập nhật và lưu lại toàn bộ
     existing_translations.update(new_translations)
@@ -101,4 +101,4 @@ if __name__ == "__main__":
     output_tsv = "translation_vn.tsv"
     
     # Mỗi lần chạy dịch 2000 dòng (có thể điều chỉnh tùy theo giới hạn API)
-    process_tsv(input_tsv, output_tsv, max_rows_per_run=2000)
+    process_tsv(input_tsv, output_tsv, max_rows_per_run=100000)
