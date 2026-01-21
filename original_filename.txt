@@ -1,1 +1,1 @@
-translate_words_map_ko
+translate_words_map_zh_tw
