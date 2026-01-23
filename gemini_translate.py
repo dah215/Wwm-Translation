@@ -29,7 +29,8 @@ def load_existing_translations(output_path):
     translations = {}
     if os.path.exists(output_path):
         with open(output_path, 'r', encoding='utf-8') as f:
-            reader = csv.reader(f, delimiter='\\t')
+            # Sửa lỗi: delimiter phải là '\t'
+            reader = csv.reader(f, delimiter='\t')
             next(reader, None) # skip header
             for row in reader:
                 if len(row) >= 2:
@@ -49,7 +50,8 @@ def process_tsv(input_path, output_path, batch_size=30, max_rows_per_run=2000):
     all_rows_info = [] # Để giữ thứ tự và ID
 
     with open(input_path, 'r', encoding='utf-8') as f:
-        reader = csv.reader(f, delimiter='\\t')
+        # Sửa lỗi: delimiter phải là '\t'
+        reader = csv.reader(f, delimiter='\t')
         header = next(reader)
         for row in reader:
             if len(row) < 2: continue
@@ -91,10 +93,9 @@ def process_tsv(input_path, output_path, batch_size=30, max_rows_per_run=2000):
     
     # Ghi lại file kết quả (giữ nguyên header)
     with open(output_path, 'w', encoding='utf-8', newline='') as f:
-        writer = csv.writer(f, delimiter='\\t')
+        # Sửa lỗi: delimiter phải là '\t'
+        writer = csv.writer(f, delimiter='\t')
         writer.writerow(header)
-        # Ghi theo thứ tự ID đã có để đảm bảo tính nhất quán (tùy chọn)
-        # Ở đây ta ghi toàn bộ những gì đã dịch được
         for row_id, text in existing_translations.items():
             writer.writerow([row_id, text])
     
@@ -104,5 +105,4 @@ if __name__ == "__main__":
     input_tsv = "extracted_text.tsv"
     output_tsv = "translation_vn.tsv"
     
-    # Mỗi lần chạy dịch 2000 dòng (có thể điều chỉnh tùy theo giới hạn API)
     process_tsv(input_tsv, output_tsv, max_rows_per_run=100000)
