@@ -4,18 +4,22 @@ import time
 import google.generativeai as genai
 
 # Cấu hình API
-API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyCchGLebhB2aNwukTXJ7Zh1sYTknahxLQk")
+API_KEY = os.environ.get("GEMINI_API_KEY")
+if not API_KEY:
+    print("Lỗi: Biến môi trường GEMINI_API_KEY chưa được đặt. Vui lòng tạo một khóa API mới và thêm nó vào mục Secrets của kho lưu trữ GitHub với tên GEMINI_API_KEY.")
+    exit(1)
+
 genai.configure(api_key=API_KEY)
 model = genai.GenerativeModel('gemini-flash-latest')
 
 def translate_batch(texts, target_lang="Vietnamese"):
-    prompt = f"Translate the following game strings from Traditional Chinese to {target_lang}. Keep the original format, tags (like #Y, #E, [xxxx]), and variables. Return only the translated strings, one per line. Do not add any explanations.\n\n"
-    prompt += "\n".join(texts)
+    prompt = f"Translate the following game strings from Traditional Chinese to {target_lang}. Keep the original format, tags (like #Y, #E, [xxxx]), and variables. Return only the translated strings, one per line. Do not add any explanations.\\n\\n"
+    prompt += "\\n".join(texts)
     
     try:
         response = model.generate_content(prompt)
         translated_content = response.text.strip()
-        lines = translated_content.split('\n')
+        lines = translated_content.split('\\n')
         return lines
     except Exception as e:
         print(f"Error during translation: {e}")
@@ -25,7 +29,7 @@ def load_existing_translations(output_path):
     translations = {}
     if os.path.exists(output_path):
         with open(output_path, 'r', encoding='utf-8') as f:
-            reader = csv.reader(f, delimiter='\t')
+            reader = csv.reader(f, delimiter='\\t')
             next(reader, None) # skip header
             for row in reader:
                 if len(row) >= 2:
@@ -45,7 +49,7 @@ def process_tsv(input_path, output_path, batch_size=30, max_rows_per_run=2000):
     all_rows_info = [] # Để giữ thứ tự và ID
 
     with open(input_path, 'r', encoding='utf-8') as f:
-        reader = csv.reader(f, delimiter='\t')
+        reader = csv.reader(f, delimiter='\\t')
         header = next(reader)
         for row in reader:
             if len(row) < 2: continue
@@ -87,7 +91,7 @@ def process_tsv(input_path, output_path, batch_size=30, max_rows_per_run=2000):
     
     # Ghi lại file kết quả (giữ nguyên header)
     with open(output_path, 'w', encoding='utf-8', newline='') as f:
-        writer = csv.writer(f, delimiter='\t')
+        writer = csv.writer(f, delimiter='\\t')
         writer.writerow(header)
         # Ghi theo thứ tự ID đã có để đảm bảo tính nhất quán (tùy chọn)
         # Ở đây ta ghi toàn bộ những gì đã dịch được
