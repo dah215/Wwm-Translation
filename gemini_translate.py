@@ -4,9 +4,9 @@ import time
 import google.generativeai as genai
 
 # Cấu hình API
-API_KEY = os.environ.get("GEMINI_API_KEY")
+API_KEY = os.environ.get("OPEN_AI")
 if not API_KEY:
-    print("Lỗi: Biến môi trường GEMINI_API_KEY chưa được đặt. Vui lòng tạo một khóa API mới và thêm nó vào mục Secrets của kho lưu trữ GitHub với tên GEMINI_API_KEY.")
+    print("Lỗi: Biến môi trường OPEN_AI chưa được đặt. Vui lòng tạo một khóa API mới và thêm nó vào mục Secrets của kho lưu trữ GitHub với tên GEMINI_API_KEY.")
     exit(1)
 
 genai.configure(api_key=API_KEY)
