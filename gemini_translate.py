@@ -4,13 +4,13 @@ import time
 import google.generativeai as genai
 
 # Cấu hình API
-API_KEY = os.environ.get("OPEN_AI")
+API_KEY = os.environ.get("GEMINI_API_KEY")
 if not API_KEY:
     print("Lỗi: Biến môi trường OPEN_AI chưa được đặt. Vui lòng tạo một khóa API mới và thêm nó vào mục Secrets của kho lưu trữ GitHub với tên GEMINI_API_KEY.")
     exit(1)
 
 genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel('gpt-5.2-pro')
+model = genai.GenerativeModel('gemini-3-flash-preview')
 
 def translate_batch(texts, target_lang="Vietnamese"):
     prompt = f"Translate the following game strings from Traditional Chinese to {target_lang}. Keep the original format, tags (like #Y, #E, [xxxx]), and variables. Return only the translated strings, one per line. Do not add any explanations.\\n\\n"
