@@ -105,4 +105,4 @@ if __name__ == "__main__":
     input_tsv = "extracted_text.tsv"
     output_tsv = "translation_vn.tsv"
     
-    process_tsv(input_tsv, output_tsv, max_rows_per_run=100000)
+    process_tsv(input_tsv, output_tsv, max_rows_per_run=40000)
