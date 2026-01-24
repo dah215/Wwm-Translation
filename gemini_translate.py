@@ -10,7 +10,7 @@ if not API_KEY:
     exit(1)
 
 genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel('gemini-3-flash-preview')
+model = genai.GenerativeModel('gemini-flash-latest')
 
 def translate_batch(texts, target_lang="Vietnamese"):
     prompt = f"Translate the following game strings from Traditional Chinese to {target_lang}. Keep the original format, tags (like #Y, #E, [xxxx]), and variables. Return only the translated strings, one per line. Do not add any explanations.\\n\\n"
