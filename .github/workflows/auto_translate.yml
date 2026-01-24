@@ -3,7 +3,7 @@ name: Continuous Translation and Repack
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 */3 * * *'
+    - cron: '0 */4 * * *'
   push:
     branches:
       - main
