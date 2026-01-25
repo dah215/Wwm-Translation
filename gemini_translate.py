@@ -103,7 +103,7 @@ def process_tsv(input_path, output_path, batch_size=20, max_batches_per_run=17):
         
         # Tăng thời gian chờ để tránh rate limit
         if i + batch_size < len(rows_to_translate):
-            wait_time = 4
+            wait_time = 6
             print(f"Waiting {wait_time} seconds before next batch...")
             time.sleep(wait_time)
 
